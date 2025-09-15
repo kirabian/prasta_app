@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:lottie/lottie.dart';
+import 'package:prasta/auth/login.dart';
+import 'package:prasta/auth/register.dart';
+import 'package:prasta/extension/navigation.dart';
+import 'package:prasta/shared_preferenced/preferenced.dart';
+import 'package:prasta/widgets/appimage.dart';
+
+class Day16SplashScreen extends StatefulWidget {
+  const Day16SplashScreen({super.key});
+  static const id = "/splash_screen";
+
+  @override
+  State<Day16SplashScreen> createState() => _Day16SplashScreenState();
+}
+
+class _Day16SplashScreenState extends State<Day16SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkLogin();
+  }
+
+  void _checkLogin() async {
+    bool? isLogin = await PreferenceHandler.getLogin();
+
+    Future.delayed(const Duration(seconds: 5)).then((value) {
+      if (!mounted) return;
+
+      if (isLogin == true) {
+        context.pushReplacementNamed(RegisterPage.id);
+      } else {
+        context.push(LoginPage());
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenUtilInit(
+      builder: (context, child) {
+        return Scaffold(
+          body: SizedBox.expand(
+            child: Lottie.asset(
+              AppImage.Background,
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              repeat: true,
+              animate: true,
+              fit: BoxFit.fill,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
