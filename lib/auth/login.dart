@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:prasta/api/register_service.dart';
 import 'package:prasta/auth/register.dart';
 import 'package:prasta/extension/navigation.dart';
+import 'package:prasta/shared_preferenced/preferenced.dart';
 import 'package:prasta/views/dashboard_screen.dart';
 
 class LoginPage extends StatefulWidget {
@@ -13,8 +15,42 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
   bool rememberMe = false;
   bool obscure = true;
+
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email dan password harus diisi")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthenticationAPI.loginUser(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      await PreferenceHandler.saveLogin();
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Login gagal: $e")));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +111,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Input Email
                       TextField(
+                        controller: _emailController,
                         decoration: InputDecoration(
                           hintText: "Masukan Email",
                           hintStyle: const TextStyle(color: Color(0xFF11261A)),
@@ -99,6 +136,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Input Password
                       TextField(
+                        controller: _passwordController,
                         obscureText: obscure,
                         decoration: InputDecoration(
                           hintText: "Kata Sandi",
@@ -177,26 +215,27 @@ class _LoginPageState extends State<LoginPage> {
                       // Tombol login
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 55,
                         child: ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF347338),
+                            backgroundColor: Color(0xFF347338),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          onPressed: () {
-                            context.pushNamedAndRemoveAll(DashboardScreen.id);
-                            // Arahkan ke halaman home
-                          },
-                          child: const Text(
-                            "MASUK",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : const Text(
+                                  "Login",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 15),

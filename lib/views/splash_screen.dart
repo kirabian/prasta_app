@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
 import 'package:prasta/auth/login.dart';
-import 'package:prasta/auth/register.dart';
 import 'package:prasta/extension/navigation.dart';
 import 'package:prasta/shared_preferenced/preferenced.dart';
+import 'package:prasta/views/dashboard_screen.dart';
 import 'package:prasta/widgets/appimage.dart';
 
 class Day16SplashScreen extends StatefulWidget {
@@ -29,7 +29,7 @@ class _Day16SplashScreenState extends State<Day16SplashScreen> {
       if (!mounted) return;
 
       if (isLogin == true) {
-        context.pushReplacementNamed(RegisterPage.id);
+        context.pushReplacementNamed(DashboardScreen.id);
       } else {
         context.push(LoginPage());
       }
