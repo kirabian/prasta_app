@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:prasta/api/register_service.dart';
 import 'package:prasta/models/get_user_model.dart';
 
@@ -11,6 +14,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late Future<GetUserModel> futureProfile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -18,16 +22,39 @@ class _ProfilePageState extends State<ProfilePage> {
     futureProfile = AuthenticationAPI.getProfile(); // ✅ ambil dari service kamu
   }
 
+  Future<void> _pickAndUploadPhoto() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+
+      try {
+        await AuthenticationAPI.updateFoto(imageFile: file);
+
+        // ✅ Refresh data profile
+        setState(() {
+          futureProfile = AuthenticationAPI.getProfile();
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Foto berhasil diperbarui")),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Gagal update foto: $e")));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
-      // appBar: AppBar(
-      //   title: const Text("Absensi Prasta"),
-      //   backgroundColor: const Color(0xFF347338), // hijau utama
-      //   foregroundColor: Colors.white,
-      //   elevation: 0,
-      // ),
       body: FutureBuilder<GetUserModel>(
         future: futureProfile,
         builder: (context, snapshot) {
@@ -78,9 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icons.camera_alt,
                               color: Colors.white,
                             ),
-                            onPressed: () {
-                              // TODO: panggil AuthenticationAPI.updateFoto()
-                            },
+                            onPressed: _pickAndUploadPhoto,
                           ),
                         ),
                       ),
@@ -124,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Statistik singkat (sementara hardcode)
+                // Statistik singkat
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(

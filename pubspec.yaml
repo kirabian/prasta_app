@@ -28,11 +28,16 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  animate_do: ^4.2.0
+  animated_switcher: ^1.0.1
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
   flutter_screenutil: ^5.9.3
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
   google_fonts: ^6.3.1
+  google_maps_flutter: ^2.13.1
   http: ^1.5.0
   image_picker: ^1.2.0
   introduction_screen: ^4.0.0

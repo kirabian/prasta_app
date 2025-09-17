@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:prasta/api/register_service.dart';
 import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/profile_screen.dart';
 import 'package:prasta/views/statistik_screen.dart';
+import 'package:prasta/views/test.dart';
 import 'package:prasta/widgets/bottom_nav.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -14,7 +18,12 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  GoogleMapController? mapController;
+  LatLng _currentPosition = LatLng(-6.200000, 106.816666);
+  String _currentAddress = "Mendapatkan lokasi...";
+  Marker? _marker;
   int _currentIndex = 0;
+  late Future<void> _locationFuture;
 
   // Palet warna Prasta
   final Color primaryColor = const Color(0xFF347338);
@@ -27,10 +36,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _locationFuture = _getCurrentLocation();
     _pages = [
       _buildBerandaPage(),
-      const Center(child: Text("Absen Page")),
       StatistikPage(),
+      GoogleMapsScreen(),
       ProfilePage(),
     ];
   }
@@ -169,31 +179,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Dummy Google Maps
-          Container(
-            height: 180,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: secondaryColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: secondaryColor, width: 1.5),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.map, size: 50, color: primaryColor),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Lokasi Anda (Dummy Map)",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: darkColor,
-                    ),
+          // Map Section with FutureBuilder
+          FutureBuilder(
+            future: _locationFuture,
+            builder: (context, snapshot) {
+              return Container(
+                height: 300,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: secondaryColor.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: secondaryColor, width: 1.5),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: _currentPosition,
+                            zoom: 15,
+                          ),
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          mapType: MapType.hybrid,
+                          onMapCreated: (GoogleMapController controller) {
+                            mapController = controller;
+                          },
+                          markers: _marker != null ? {_marker!} : {},
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _currentAddress,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _locationFuture = _getCurrentLocation();
+                          });
+                        },
+                        child: Text("Get Current Location"),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 20),
 
@@ -336,5 +373,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
         primaryColor: primaryColor,
       ),
     );
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _currentAddress = "Mendapatkan lokasi...";
+    });
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        _currentAddress = "Layanan lokasi tidak aktif";
+      });
+      await Geolocator.openLocationSettings();
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        setState(() {
+          _currentAddress = "Izin lokasi ditolak";
+        });
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _currentAddress = "Izin lokasi ditolak secara permanen";
+      });
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+      });
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+
+        setState(() {
+          _marker = Marker(
+            markerId: MarkerId("lokasi_saya"),
+            position: _currentPosition,
+            infoWindow: InfoWindow(
+              title: 'Lokasi Anda',
+              snippet: "${place.street}, ${place.locality}",
+            ),
+          );
+
+          _currentAddress =
+              "${place.name}, ${place.street}, ${place.locality}, ${place.country}";
+
+          mapController?.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: _currentPosition, zoom: 16),
+            ),
+          );
+        });
+      } else {
+        setState(() {
+          _currentAddress = "Alamat tidak ditemukan";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _currentAddress = "Gagal mendapatkan lokasi: $e";
+      });
+    }
   }
 }

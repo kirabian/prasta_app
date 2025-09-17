@@ -226,7 +226,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        // crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             "Bergabung dengan Prasta",
@@ -237,6 +237,47 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                           const SizedBox(height: 20),
+
+                          // Pilih Gambar
+                          _selectedImage != null
+                              ? Column(
+                                  children: [
+                                    ClipOval(
+                                      child: Image.file(
+                                        _selectedImage!,
+                                        height: 150,
+                                        width: 150,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    TextButton.icon(
+                                      onPressed: _pickImage,
+                                      icon: const Icon(Icons.image),
+                                      label: const Text("Ganti Gambar"),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: _pickImage,
+                                      child: CircleAvatar(
+                                        radius: 75, // sama dengan ukuran gambar
+                                        backgroundColor: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.image,
+                                          size: 50,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text("Pilih Gambar"),
+                                  ],
+                                ),
+
+                          const SizedBox(height: 24),
 
                           // Input Nama Lengkap
                           TextField(
@@ -319,25 +360,6 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
-
-                          // Pilih Gambar
-                          _selectedImage != null
-                              ? Column(
-                                  children: [
-                                    Image.file(_selectedImage!, height: 150),
-                                    TextButton.icon(
-                                      onPressed: _pickImage,
-                                      icon: const Icon(Icons.image),
-                                      label: const Text("Ganti Gambar"),
-                                    ),
-                                  ],
-                                )
-                              : TextButton.icon(
-                                  onPressed: _pickImage,
-                                  icon: const Icon(Icons.image),
-                                  label: const Text("Pilih Gambar"),
-                                ),
-                          const SizedBox(height: 24),
 
                           // Input Jenis Kelamin
                           const Text(
@@ -431,7 +453,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             items: _batches.map((batch_model.Datum batch) {
                               return DropdownMenuItem<int>(
                                 value: batch.id,
-                                child: Text(batch.batchKe ?? "Tanpa Nama"),
+                                child: Text(
+                                  "Batch:  ${batch.batchKe ?? "Tanpa Nama"}",
+                                ),
                               );
                             }).toList(),
                             onChanged: _isBatchesLoading

@@ -101,16 +101,21 @@ class AuthenticationAPI {
     final url = Uri.parse(Endpoint.editFoto);
     final token = await PreferenceHandler.getToken();
 
+    // Konversi ke base64
     String imageBase64 = "";
     if (imageFile != null) {
-      final bytes = imageFile.readAsBytesSync();
+      final bytes = await imageFile.readAsBytes(); // async, lebih aman
       imageBase64 = base64Encode(bytes);
     }
 
     final response = await http.put(
       url,
-      headers: {"Accept": "application/json", "Authorization": "Bearer $token"},
-      body: {"profile_photo": imageBase64},
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json", // ✅ wajib untuk base64
+      },
+      body: jsonEncode({"profile_photo": imageBase64}),
     );
 
     final result = json.decode(response.body);
