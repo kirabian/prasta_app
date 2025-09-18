@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:prasta/api/absen_service.dart';
 import 'package:prasta/api/register_service.dart';
+import 'package:prasta/models/absen_checkin_model.dart';
+import 'package:prasta/models/absen_checkout_model.dart';
 import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/profile_screen.dart';
 import 'package:prasta/views/statistik_screen.dart';
@@ -24,35 +29,169 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Marker? _marker;
   int _currentIndex = 0;
   late Future<void> _locationFuture;
+  late Future<GetUserModel> _profileFuture;
+  String _localTime = "--:--:--";
 
-  // Palet warna Prasta
+  Map<String, dynamic>? _absenTodayData;
+
+  // Palet warna
   final Color primaryColor = const Color(0xFF347338);
   final Color secondaryColor = const Color(0xFFA5BF99);
   final Color darkColor = const Color(0xFF11261A);
   final Color whiteColor = Colors.white;
 
-  late final List<Widget> _pages;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _locationFuture = _getCurrentLocation();
-    _pages = [
-      _buildBerandaPage(),
-      StatistikPage(),
-      GoogleMapsScreen(),
-      ProfilePage(),
-    ];
+    _profileFuture = AuthenticationAPI.getProfile(); // simpan future profile
+    _startClock();
+    _absenToday();
+  }
+
+  Future<void> _absenCheckOut() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      String address = "Alamat tidak ditemukan";
+      String locationName = "Lokasi Tidak Diketahui";
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        address =
+            "${place.street}, ${place.subLocality}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+        locationName = place.locality ?? "Lokasi Tidak Diketahui";
+      }
+
+      AbsenCheckOut? result = await AbsenService.checkOut(
+        checkOutLat: position.latitude,
+        checkOutLng: position.longitude,
+        checkOutLocation: locationName,
+        checkOutAddress: address,
+      );
+
+      if (!mounted) return;
+
+      if (result != null) {
+        await _absenToday(); // refresh data
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Check-out berhasil: ${result.message}")),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Check-out gagal")));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  Future<void> _absenCheckIn() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      String address = "Alamat tidak ditemukan";
+      String locationName = "Lokasi Tidak Diketahui";
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        address =
+            "${place.street}, ${place.subLocality}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+        locationName = place.locality ?? "Lokasi Tidak Diketahui";
+      }
+
+      AbsenCheckIn? result = await AbsenService.checkIn(
+        checkInLat: position.latitude,
+        checkInLng: position.longitude,
+        checkInLocation: locationName,
+        checkInAddress: address,
+      );
+
+      if (!mounted) return;
+
+      if (result != null) {
+        await _absenToday(); // refresh data
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Check-in berhasil: ${result.message}")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Anda sudah melakukan absen hari ini")),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  Future<void> _absenToday() async {
+    final response = await AbsenService.getAbsenToday();
+    if (response != null && response.data != null) {
+      setState(() {
+        _absenTodayData = {
+          "status": response.data!.status ?? "Belum Absen",
+          "check_in": response.data!.checkInTime ?? "-",
+          "check_out": response.data!.checkOutTime ?? "Belum Absen",
+        };
+      });
+    } else {
+      setState(() {
+        _absenTodayData = {
+          "status": "Belum Absen",
+          "check_in": "-",
+          "check_out": "Belum Absen",
+        };
+      });
+    }
+  }
+
+  void _startClock() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final now = DateTime.now();
+      setState(() {
+        _localTime =
+            "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Widget _buildBerandaPage() {
+    final checkIn = _absenTodayData?['check_in'] ?? "-";
+    final checkOut = _absenTodayData?['check_out'] ?? "Belum Absen";
+    final status = _absenTodayData?['status'] ?? "Belum Absen";
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           FutureBuilder<GetUserModel>(
-            future: AuthenticationAPI.getProfile(),
+            future: _profileFuture, // pake future dari initState
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
@@ -63,9 +202,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               } else {
                 final name = snapshot.data!.data!.name ?? "Pengguna";
                 return Text(
-                  "Halo, $name!",
+                  "Halo, $name 👋",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: darkColor,
                   ),
@@ -73,22 +212,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
             },
           ),
-
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            "Selamat datang kembali.",
+            "Selamat datang kembali di Prasta!",
             style: TextStyle(fontSize: 16, color: darkColor.withOpacity(0.7)),
           ),
           const SizedBox(height: 20),
 
-          // Card Status Absen
+          // Status Absen
           Card(
-            elevation: 2,
+            elevation: 3,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -112,7 +250,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         "Status: ",
                         style: TextStyle(
-                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: darkColor,
                         ),
@@ -126,49 +263,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: primaryColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
-                          "Tepat Waktu",
-                          style: TextStyle(
+                        child: Text(
+                          status,
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Text("Check In:", style: TextStyle(color: darkColor)),
                       Text(
-                        "Check In:",
-                        style: TextStyle(fontSize: 14, color: darkColor),
-                      ),
-                      Text(
-                        "08:00 WIB",
+                        checkIn,
                         style: TextStyle(
-                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: darkColor,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Text("Check Out:", style: TextStyle(color: darkColor)),
                       Text(
-                        "Check Out:",
-                        style: TextStyle(fontSize: 14, color: darkColor),
-                      ),
-                      Text(
-                        "Belum Absen",
+                        checkOut,
                         style: TextStyle(
-                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red,
+                          color: checkOut == "Belum Absen"
+                              ? Colors.red
+                              : darkColor,
                         ),
                       ),
                     ],
@@ -177,25 +307,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: 20),
 
-          // Map Section with FutureBuilder
+          // Google Map
           FutureBuilder(
             future: _locationFuture,
             builder: (context, snapshot) {
               return Container(
-                height: 300,
-                width: double.infinity,
+                height: 320,
                 decoration: BoxDecoration(
-                  color: secondaryColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
+                  color: secondaryColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: secondaryColor, width: 1.5),
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
                         child: GoogleMap(
                           initialCameraPosition: CameraPosition(
                             target: _currentPosition,
@@ -203,40 +335,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           myLocationEnabled: true,
                           myLocationButtonEnabled: true,
-                          mapType: MapType.hybrid,
+                          mapType: MapType.normal,
                           onMapCreated: (GoogleMapController controller) {
                             mapController = controller;
                           },
                           markers: _marker != null ? {_marker!} : {},
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          _currentAddress,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14),
-                        ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        _currentAddress,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: darkColor),
                       ),
-                      ElevatedButton(
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: whiteColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: () {
                           setState(() {
                             _locationFuture = _getCurrentLocation();
                           });
                         },
-                        child: Text("Get Current Location"),
+                        icon: const Icon(Icons.my_location),
+                        label: const Text("Refresh Lokasi"),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
+
           const SizedBox(height: 20),
 
-          // Tombol Check In / Check Out
+          // Tombol
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Expanded(
                 child: ElevatedButton.icon(
@@ -245,10 +388,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     foregroundColor: darkColor,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: _absenCheckIn,
                   icon: const Icon(Icons.login),
                   label: const Text("Check In"),
                 ),
@@ -261,83 +404,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     foregroundColor: whiteColor,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: _absenCheckOut,
                   icon: Transform(
                     alignment: Alignment.center,
                     transform: Matrix4.rotationY(3.1416),
                     child: const Icon(Icons.logout),
                   ),
-                  label: const Text(
-                    "Check Out",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  label: const Text("Check Out"),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 20),
 
-          // Card Waktu
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Waktu Berguna",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: darkColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Waktu Lokal:", style: TextStyle(color: darkColor)),
-                      Text(
-                        "-- : -- : --",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: darkColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Waktu Server:", style: TextStyle(color: darkColor)),
-                      Text(
-                        "-- : -- : --",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: darkColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+          // Time
+          _buildTimeCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeCard() {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Waktu Berguna",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: darkColor,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Waktu Lokal:", style: TextStyle(color: darkColor)),
+                Text(
+                  _localTime,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text(
+                  "Waktu Server:",
+                  style: TextStyle(color: Color(0xFF11261A)),
+                ),
+                Text(
+                  "-- : -- : --",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF11261A),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      _buildBerandaPage(),
+      StatistikPage(),
+      GoogleMapsScreen(),
+      ProfilePage(),
+    ];
+
     return Scaffold(
       backgroundColor: whiteColor,
       appBar: AppBar(
@@ -362,7 +515,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: _pages[_currentIndex],
+      body: pages[_currentIndex],
       bottomNavigationBar: BottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -403,7 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (permission == LocationPermission.deniedForever) {
       setState(() {
-        _currentAddress = "Izin lokasi ditolak secara permanen";
+        _currentAddress = "Izin lokasi ditolak permanen";
       });
       return;
     }
