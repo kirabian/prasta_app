@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:prasta/api/register_service.dart';
 import 'package:prasta/models/get_user_model.dart';
@@ -15,39 +16,133 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   late Future<GetUserModel> futureProfile;
   final ImagePicker _picker = ImagePicker();
+  XFile? _pickedFile;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    futureProfile = AuthenticationAPI.getProfile(); // ✅ ambil dari service kamu
+    futureProfile = AuthenticationAPI.getProfile();
   }
 
-  Future<void> _pickAndUploadPhoto() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
 
-    if (pickedFile != null) {
-      File file = File(pickedFile.path);
-
-      try {
-        await AuthenticationAPI.updateFoto(imageFile: file);
-
-        // ✅ Refresh data profile
-        setState(() {
-          futureProfile = AuthenticationAPI.getProfile();
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Foto berhasil diperbarui")),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Gagal update foto: $e")));
-        }
+      if (pickedFile != null) {
+        await _cropImage(pickedFile);
       }
+    } catch (e) {
+      _showErrorSnackbar("Gagal memilih gambar: $e");
+    }
+  }
+
+  Future<void> _cropImage(XFile imageFile) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: imageFile.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 90,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Foto Profil',
+            toolbarColor: const Color(0xFF347338),
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: false,
+            activeControlsWidgetColor: const Color(0xFF347338),
+            statusBarColor: Colors.black,
+            backgroundColor: Colors.white,
+            dimmedLayerColor: Colors.black.withOpacity(0.7),
+            showCropGrid: true,
+            hideBottomControls: false,
+            cropFrameColor: Colors.white,
+            cropGridColor: Colors.white.withOpacity(0.5),
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Crop Foto Profil',
+            aspectRatioLockEnabled: false,
+            resetAspectRatioEnabled: true,
+            aspectRatioPickerButtonHidden: false,
+            rotateButtonsHidden: false,
+            rotateClockwiseButtonHidden: false,
+            doneButtonTitle: 'Simpan',
+            cancelButtonTitle: 'Batal',
+            // Parameter showCancelButton dihapus karena tidak tersedia di versi ini
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        await _uploadCroppedImage(File(croppedFile.path));
+      }
+    } catch (e) {
+      _showErrorSnackbar("Gagal crop gambar: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _uploadCroppedImage(File croppedFile) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      await AuthenticationAPI.updateFoto(imageFile: croppedFile);
+
+      // Refresh data profile
+      setState(() {
+        futureProfile = AuthenticationAPI.getProfile();
+      });
+
+      _showSuccessSnackbar("Foto berhasil diperbarui");
+    } catch (e) {
+      _showErrorSnackbar("Gagal update foto: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showSuccessSnackbar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -55,175 +150,188 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
-      body: FutureBuilder<GetUserModel>(
-        future: futureProfile,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          } else if (!snapshot.hasData || snapshot.data?.data == null) {
-            return const Center(child: Text("Data tidak ditemukan"));
-          }
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : FutureBuilder<GetUserModel>(
+              future: futureProfile,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      "Error: ${snapshot.error}",
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data?.data == null) {
+                  return const Center(child: Text("Data tidak ditemukan"));
+                }
 
-          final user = snapshot.data!.data!;
+                final user = snapshot.data!.data!;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Foto profil
-                Center(
-                  child: Stack(
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: const Color(0xFFA5BF99),
-                        backgroundImage: user.profilePhotoUrl != null
-                            ? NetworkImage(user.profilePhotoUrl!)
-                            : null,
-                        child: user.profilePhotoUrl == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          backgroundColor: const Color(0xFF347338),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
+                      // Foto profil
+                      Center(
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: const Color(0xFFA5BF99),
+                              backgroundImage: user.profilePhotoUrl != null
+                                  ? NetworkImage(user.profilePhotoUrl!)
+                                  : null,
+                              child: user.profilePhotoUrl == null
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.white,
+                                    )
+                                  : null,
                             ),
-                            onPressed: _pickAndUploadPhoto,
-                          ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: CircleAvatar(
+                                backgroundColor: const Color(0xFF347338),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: _isLoading ? null : _pickImage,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Tombol Edit Profil & Keluar
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF347338),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                // TODO: ke halaman edit profil
+                              },
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        label: const Text(
+                          "Edit Profil",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                await AuthenticationAPI.logout();
+                                if (mounted) {
+                                  Navigator.pushReplacementNamed(
+                                    context,
+                                    "/login",
+                                  );
+                                }
+                              },
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        label: const Text(
+                          "Keluar",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Statistik singkat
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Statistik Singkat",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF11261A),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _statCard("15", "Hari Berturut"),
+                                _statCard("168", "Total Jam"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Informasi Profil
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Informasi Profil",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF11261A),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _infoTile("Nama Lengkap", user.name ?? "-"),
+                            _infoTile("Email", user.email ?? "-"),
+                            _infoTile("Batch", user.batchKe ?? "-"),
+                            _infoTile("Pelatihan", user.trainingTitle ?? "-"),
+                            _infoTile(
+                              "Jenis Kelamin",
+                              user.jenisKelamin ?? "-",
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Tombol Edit Profil & Keluar
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF347338),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  onPressed: () {
-                    // TODO: ke halaman edit profil
-                  },
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  label: const Text(
-                    "Edit Profil",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  onPressed: () async {
-                    await AuthenticationAPI.logout();
-                    if (mounted) {
-                      Navigator.pushReplacementNamed(context, "/login");
-                    }
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    "Keluar",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Statistik singkat
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Statistik Singkat",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF11261A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _statCard("15", "Hari Berturut"),
-                          _statCard("168", "Total Jam"),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Informasi Profil
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Informasi Profil",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF11261A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _infoTile("Nama Lengkap", user.name ?? "-"),
-                      _infoTile("Email", user.email ?? "-"),
-                      _infoTile("Batch", user.batchKe ?? "-"),
-                      _infoTile("Pelatihan", user.trainingTitle ?? "-"),
-                      _infoTile("Jenis Kelamin", user.jenisKelamin ?? "-"),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
+      // Bottom Navigation Bar
     );
   }
 

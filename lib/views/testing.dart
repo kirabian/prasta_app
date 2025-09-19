@@ -5,23 +5,25 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:prasta/api/absen_service.dart';
 import 'package:prasta/api/register_service.dart';
+import 'package:prasta/extension/navigation.dart';
 import 'package:prasta/models/absen_checkin_model.dart';
 import 'package:prasta/models/absen_checkout_model.dart';
 import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/profile_screen.dart';
+import 'package:prasta/views/statistik_screen.dart';
+import 'package:prasta/views/test.dart';
 import 'package:prasta/views/testing_dua.dart';
-import 'package:prasta/widgets/bottom_nav.dart';
 
-class DashboardScreen extends StatefulWidget {
+class TestDashBoard extends StatefulWidget {
   static const id = '/dashboard';
-  const DashboardScreen({super.key});
+  const TestDashBoard({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<TestDashBoard> createState() => _TestDashBoardState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 0;
+class _TestDashBoardState extends State<TestDashBoard> {
+  final int _currentIndex = 0;
   late Future<GetUserModel> _profileFuture;
   String _localTime = "--:--:--";
   Map<String, dynamic>? _absenTodayData;
@@ -30,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Palet warna
   final Color primaryColor = const Color(0xFF347338);
-  // final Color secondaryColor = const Color(0xFFA5BF99);
+  final Color secondaryColor = const Color(0xFFA5BF99);
   final Color darkColor = const Color(0xFF11261A);
   final Color whiteColor = Colors.white;
 
@@ -281,15 +283,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MapCheckInPage()),
-                    );
-                    // refresh data absen setelah balik dari MapCheckInPage
-                    _absenToday();
+                  onPressed: () {
+                    context.push(MapCheckInPage());
                   },
-
                   icon: const Icon(Icons.login),
                   label: const Text("Check In"),
                 ),
@@ -329,8 +325,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio:
-                1.1, // 🔹 semakin besar angka, semakin gepeng (lebih kecil)
             children: [
               _buildQuickAccess("Izin", Icons.note_add),
               _buildQuickAccess("Absen Today", Icons.today),
@@ -373,43 +367,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final pages = [
       _buildDashboardPage(),
-      // StatistikPage(),
-      // GoogleMapsScreen(),
+      StatistikPage(),
+      GoogleMapsScreen(),
       ProfilePage(),
     ];
 
     return Scaffold(
-      backgroundColor: whiteColor,
       appBar: AppBar(
+        title: const Text("Dashboard"),
         backgroundColor: whiteColor,
-        elevation: 0,
-        title: Text(
-          "Absensi Prasta",
-          style: TextStyle(color: darkColor, fontWeight: FontWeight.bold),
-        ),
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: darkColor),
-          onPressed: () async {
-            await AuthenticationAPI.logout();
-            Navigator.pushReplacementNamed(context, '/login');
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.more_vert, color: darkColor),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: pages[_currentIndex],
-      bottomNavigationBar: BottomNav(
-        currentIndex: _currentIndex,
-        onTabItemSelected: (i) {
-          setState(() => _currentIndex = i);
-        },
-        primaryColor: primaryColor,
-      ),
+      // bottomNavigationBar: BottomNav(
+      //   currentIndex: _currentIndex,
+      //   onTap: (i) => setState(() => _currentIndex = i),
+      //   primaryColor: primaryColor,
+      // ),
     );
   }
 }
