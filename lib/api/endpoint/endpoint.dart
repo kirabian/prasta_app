@@ -7,6 +7,10 @@ class Endpoint {
   static const String checkOut = "$baseURL/absen/check-out";
   static const String izin = "$baseURL/izin";
   static const String absenToday = "$baseURL/absen/today";
+
+  // Endpoint baru untuk statistik absensi
+  static const String absenStats = "$baseURL/absen/stats";
+
   static const String training = "$baseURL/trainings";
   static const String batch = "$baseURL/batches";
   static const String historyAbsen = "$baseURL/absen/history";

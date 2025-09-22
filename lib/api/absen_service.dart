@@ -1,9 +1,13 @@
+// lib/api/absen_service.dart
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart'; // <-- Tambahkan import ini untuk format tanggal
 import 'package:prasta/api/endpoint/endpoint.dart';
 import 'package:prasta/models/absen_checkin_model.dart';
 import 'package:prasta/models/absen_checkout_model.dart';
+import 'package:prasta/models/absen_stats_model.dart';
 import 'package:prasta/models/absen_today_model.dart';
 import 'package:prasta/shared_preferenced/preferenced.dart';
 
@@ -19,10 +23,9 @@ class AbsenService {
       final token = await PreferenceHandler.getToken();
 
       final now = DateTime.now();
-      final attendanceDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final checkInTime =
-          "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      // Menggunakan intl untuk format yang lebih konsisten
+      final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
+      final checkInTime = DateFormat('HH:mm').format(now);
 
       final response = await http.post(
         Uri.parse(Endpoint.checkIn),
@@ -64,10 +67,8 @@ class AbsenService {
       final token = await PreferenceHandler.getToken();
 
       final now = DateTime.now();
-      final attendanceDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final checkOutTime =
-          "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
+      final checkOutTime = DateFormat('HH:mm').format(now);
 
       final response = await http.post(
         Uri.parse(Endpoint.checkOut),
@@ -103,8 +104,7 @@ class AbsenService {
     try {
       final token = await PreferenceHandler.getToken();
       final now = DateTime.now();
-      final attendanceDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
 
       final response = await http.get(
         Uri.parse("${Endpoint.absenToday}?attendance_date=$attendanceDate"),
@@ -125,4 +125,47 @@ class AbsenService {
       return null;
     }
   }
+
+  // ===== BAGIAN YANG DIPERBARUI =====
+  /// Absen Stats with Date Range
+  static Future<AbsenStatsModel?> getAbsenStats({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final token = await PreferenceHandler.getToken();
+
+      // 1. Format tanggal sesuai kebutuhan API (yyyy-MM-dd)
+      final String formattedStartDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(startDate);
+      final String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+
+      // 2. Bangun URL lengkap dengan parameter query start dan end
+      final url = Uri.parse(
+        "${Endpoint.absenStats}?start=$formattedStartDate&end=$formattedEndDate",
+      );
+
+      final response = await http.get(
+        url, // Gunakan URL yang sudah dibangun
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return AbsenStatsModel.fromJson(jsonResponse);
+      } else {
+        print("Get Absen Stats Failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error Get Absen Stats: $e");
+      return null;
+    }
+  }
+
+  // ===== AKHIR BAGIAN YANG DIPERBARUI =====
 }
