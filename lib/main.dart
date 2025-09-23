@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:prasta/auth/login.dart';
 import 'package:prasta/auth/register.dart';
 import 'package:prasta/views/dashboard_screen.dart';
+import 'package:prasta/views/riwayat_screen.dart';
 import 'package:prasta/views/splash_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 4. Inisialisasi data lokalisasi untuk Bahasa Indonesia
+  await initializeDateFormatting('id_ID', null);
   runApp(const MyApp());
 }
 
@@ -42,6 +48,7 @@ class MyApp extends StatelessWidget {
         Day16SplashScreen.id: (context) => Day16SplashScreen(),
         LoginPage.id: (context) => const LoginPage(),
         RegisterPage.id: (context) => const RegisterPage(),
+        AttendanceHistoryPage.id: (context) => const AttendanceHistoryPage(),
         DashboardScreen.id: (context) => const DashboardScreen(),
       },
       // home: const MyHomePage(title: 'Flutter Demo Home Page'),

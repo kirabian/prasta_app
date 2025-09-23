@@ -3,12 +3,14 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart'; // <-- Tambahkan import ini untuk format tanggal
+import 'package:intl/intl.dart';
 import 'package:prasta/api/endpoint/endpoint.dart';
 import 'package:prasta/models/absen_checkin_model.dart';
 import 'package:prasta/models/absen_checkout_model.dart';
 import 'package:prasta/models/absen_stats_model.dart';
 import 'package:prasta/models/absen_today_model.dart';
+import 'package:prasta/models/history_absen_model.dart';
+import 'package:prasta/models/izin_model.dart'; // <-- DITAMBAHKAN
 import 'package:prasta/shared_preferenced/preferenced.dart';
 
 class AbsenService {
@@ -19,11 +21,11 @@ class AbsenService {
     required String checkInLocation,
     required String checkInAddress,
   }) async {
+    // ... (kode checkIn tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
 
       final now = DateTime.now();
-      // Menggunakan intl untuk format yang lebih konsisten
       final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
       final checkInTime = DateFormat('HH:mm').format(now);
 
@@ -63,6 +65,7 @@ class AbsenService {
     required String checkOutLocation,
     required String checkOutAddress,
   }) async {
+    // ... (kode checkOut tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
 
@@ -101,6 +104,7 @@ class AbsenService {
 
   /// Absen Today
   static Future<AbsenToday?> getAbsenToday() async {
+    // ... (kode getAbsenToday tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
       final now = DateTime.now();
@@ -126,28 +130,26 @@ class AbsenService {
     }
   }
 
-  // ===== BAGIAN YANG DIPERBARUI =====
   /// Absen Stats with Date Range
   static Future<AbsenStatsModel?> getAbsenStats({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    // ... (kode getAbsenStats tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
 
-      // 1. Format tanggal sesuai kebutuhan API (yyyy-MM-dd)
       final String formattedStartDate = DateFormat(
         'yyyy-MM-dd',
       ).format(startDate);
       final String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
 
-      // 2. Bangun URL lengkap dengan parameter query start dan end
       final url = Uri.parse(
         "${Endpoint.absenStats}?start=$formattedStartDate&end=$formattedEndDate",
       );
 
       final response = await http.get(
-        url, // Gunakan URL yang sudah dibangun
+        url,
         headers: {
           "Accept": "application/json",
           "Authorization": "Bearer $token",
@@ -167,5 +169,69 @@ class AbsenService {
     }
   }
 
-  // ===== AKHIR BAGIAN YANG DIPERBARUI =====
+  /// Absen History with Date Range
+  static Future<AbsenHistoryModel?> getAbsenHistory({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    // ... (kode getAbsenHistory tidak berubah)
+    try {
+      final token = await PreferenceHandler.getToken();
+      final String formattedStartDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(startDate);
+      final String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+
+      final url = Uri.parse(
+        "${Endpoint.historyAbsen}?start=$formattedStartDate&end=$formattedEndDate",
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return AbsenHistoryModel.fromJson(jsonDecode(response.body));
+      } else {
+        print("Get Absen History Failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error Get Absen History: $e");
+      return null;
+    }
+  }
+
+  // ===== FUNGSI BARU UNTUK IZIN =====
+  /// Submit Izin
+  static Future<IzinModel?> submitIzin({required String alasan}) async {
+    try {
+      final token = await PreferenceHandler.getToken();
+      final now = DateTime.now();
+      final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
+
+      final response = await http.post(
+        Uri.parse(Endpoint.izin),
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: {"attendance_date": attendanceDate, "alasan_izin": alasan},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return IzinModel.fromJson(jsonDecode(response.body));
+      } else {
+        print("Submit Izin Failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error Submit Izin: $e");
+      return null;
+    }
+  }
 }

@@ -231,11 +231,6 @@ class _AttendanceStatsPageState extends State<AttendanceStatsPage> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.analytics_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
           ),
         ],
       ),

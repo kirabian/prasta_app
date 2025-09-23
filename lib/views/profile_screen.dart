@@ -3,13 +3,368 @@
 import 'dart:io';
 
 import 'package:animate_do/animate_do.dart';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img; // <-- Import package image
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:prasta/api/register_service.dart';
+import 'package:prasta/auth/login.dart';
 import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/about_app_screen.dart';
 
+// ############################################################################
+// # CUSTOM CAMERA SCREEN WIDGET
+// ############################################################################
+class InstagramCameraScreen extends StatefulWidget {
+  final List<CameraDescription> cameras;
+
+  const InstagramCameraScreen({super.key, required this.cameras});
+
+  @override
+  State<InstagramCameraScreen> createState() => _InstagramCameraScreenState();
+}
+
+class _InstagramCameraScreenState extends State<InstagramCameraScreen>
+    with TickerProviderStateMixin {
+  CameraController? _controller;
+  bool _isRearCameraSelected = true;
+  bool _isFlashOn = false;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  // Filter effects
+  int _currentFilterIndex = 0;
+  final List<String> _filterNames = [
+    'Normal',
+    'Hitam Putih',
+    'Sepia',
+    'Vintage',
+    'Sejuk',
+    'Hangat',
+  ];
+  final List<ColorFilter> _filters = [
+    const ColorFilter.mode(Colors.transparent, BlendMode.multiply), // Normal
+    const ColorFilter.matrix(<double>[
+      // Black & White
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0.2126, 0.7152, 0.0722, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+    const ColorFilter.matrix(<double>[
+      // Sepia
+      0.393, 0.769, 0.189, 0, 0,
+      0.349, 0.686, 0.168, 0, 0,
+      0.272, 0.534, 0.131, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+    const ColorFilter.matrix(<double>[
+      // Vintage
+      0.9, 0.5, 0.1, 0, 0,
+      0.3, 0.8, 0.1, 0, 0,
+      0.2, 0.3, 0.5, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+    const ColorFilter.matrix(<double>[
+      // Cool
+      1, 0, 0, 0, 0,
+      0, 1, 0, 0, 0,
+      0, 0, 1.2, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+    const ColorFilter.matrix(<double>[
+      // Warm
+      1.2, 0, 0, 0, 0,
+      0, 1.1, 0, 0, 0,
+      0, 0, 0.8, 0, 0,
+      0, 0, 0, 1, 0,
+    ]),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.9,
+    ).animate(_animationController);
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final camera = widget.cameras[_isRearCameraSelected ? 0 : 1];
+      _controller = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+      await _controller!.initialize();
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Camera initialization error: $e');
+    }
+  }
+
+  void _switchCamera() async {
+    if (_controller != null) {
+      await _controller!.dispose();
+      _isRearCameraSelected = !_isRearCameraSelected;
+      await _initCamera();
+    }
+  }
+
+  void _toggleFlash() async {
+    if (_controller != null) {
+      _isFlashOn = !_isFlashOn;
+      await _controller!.setFlashMode(
+        _isFlashOn ? FlashMode.torch : FlashMode.off,
+      );
+      setState(() {});
+    }
+  }
+
+  // ===== FUNGSI YANG DIPERBARUI =====
+  Future<void> _takePicture() async {
+    if (_controller != null && _controller!.value.isInitialized) {
+      _animationController.forward().then((_) {
+        _animationController.reverse();
+      });
+
+      try {
+        // 1. Ambil gambar mentah (berwarna)
+        final XFile capturedImage = await _controller!.takePicture();
+        File imageFile = File(capturedImage.path);
+
+        // 2. Hanya proses jika filter bukan 'Normal'
+        if (_currentFilterIndex != 0) {
+          final imageBytes = await imageFile.readAsBytes();
+          img.Image? originalImage = img.decodeImage(imageBytes);
+
+          if (originalImage != null) {
+            img.Image processedImage;
+
+            // 3. Terapkan filter yang sesuai
+            switch (_currentFilterIndex) {
+              case 1: // Hitam Putih
+                processedImage = img.grayscale(originalImage);
+                break;
+              case 2: // Sepia
+                processedImage = img.sepia(originalImage);
+                break;
+              // Catatan: Filter lain memerlukan implementasi custom
+              default:
+                processedImage = originalImage;
+                break;
+            }
+
+            // 4. Simpan gambar yang sudah diproses, menimpa file asli
+            await imageFile.writeAsBytes(img.encodeJpg(processedImage));
+          }
+        }
+
+        if (mounted) {
+          // 5. Kirim file gambar yang sudah difilter ke halaman sebelumnya
+          Navigator.pop(context, imageFile);
+        }
+      } catch (e) {
+        debugPrint('Error taking picture: $e');
+      }
+    }
+  }
+  // ===== AKHIR FUNGSI YANG DIPERBARUI =====
+
+  void _changeFilter() {
+    setState(() {
+      _currentFilterIndex = (_currentFilterIndex + 1) % _filters.length;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _controller!.value.previewSize!.height,
+              height: _controller!.value.previewSize!.width,
+              child: ColorFiltered(
+                colorFilter: _filters[_currentFilterIndex],
+                child: CameraPreview(_controller!),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _toggleFlash,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Icon(
+                        _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                        color: _isFlashOn ? Colors.yellow : Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 100,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _filterNames[_currentFilterIndex],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  GestureDetector(
+                    onTap: _changeFilter,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Icon(
+                        Icons.tune,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _takePicture,
+                    child: AnimatedBuilder(
+                      animation: _scaleAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _scaleAnimation.value,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                            child: const Icon(
+                              Icons.camera,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _switchCamera,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Icon(
+                        Icons.flip_camera_ios,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ############################################################################
+// # PROFILE PAGE WIDGET
+// ############################################################################
 class ProfilePage extends StatefulWidget {
   final VoidCallback onProfileUpdated;
 
@@ -23,6 +378,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late Future<GetUserModel> futureProfile;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  List<CameraDescription>? _cameras;
 
   // Dark Green Color Palette matching Dashboard
   final Color primaryDark = const Color(0xFF0D2818);
@@ -37,12 +393,201 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     futureProfile = AuthenticationAPI.getProfile();
+    _initCameras();
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _initCameras() async {
+    try {
+      _cameras = await availableCameras();
+    } catch (e) {
+      debugPrint('Error getting cameras: $e');
+    }
+  }
+
+  Future<void> _showImageSourceDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return FadeIn(
+          duration: const Duration(milliseconds: 600),
+          child: Dialog(
+            backgroundColor: surfaceColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [surfaceColor, cardColor],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.photo_camera_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Pilih Sumber Foto",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Pilih dari mana Anda ingin mengambil foto profil",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _pickImageFromCamera();
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryColor, accentColor],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.camera_alt_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            "Kamera dengan Filter",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _pickImageFromGallery();
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryLight, accentColor],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryLight.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.photo_library_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            "Galeri",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        "Batal",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    if (_cameras == null || _cameras!.isEmpty) {
+      _showSnackbar("Kamera tidak tersedia", isError: true);
+      return;
+    }
+    try {
+      final File? imageFile = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InstagramCameraScreen(cameras: _cameras!),
+        ),
+      );
+      if (imageFile != null) {
+        await _cropImage(XFile(imageFile.path));
+      }
+    } catch (e) {
+      _showSnackbar("Gagal mengambil foto: $e", isError: true);
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
     try {
       final pickedFile = await _picker.pickImage(
-        source: ImageSource.camera,
+        source: ImageSource.gallery,
         imageQuality: 80,
       );
       if (pickedFile != null) await _cropImage(pickedFile);
@@ -64,9 +609,14 @@ class _ProfilePageState extends State<ProfilePage> {
             toolbarColor: primaryColor,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: false,
+            lockAspectRatio: true,
+            aspectRatioPresets: [CropAspectRatioPreset.square],
           ),
-          IOSUiSettings(title: 'Crop Foto Profil'),
+          IOSUiSettings(
+            title: 'Crop Foto Profil',
+            aspectRatioPresets: [CropAspectRatioPreset.square],
+            aspectRatioLockEnabled: true,
+          ),
         ],
       );
       if (croppedFile != null) {
@@ -83,14 +633,11 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isLoading = true);
     try {
       await AuthenticationAPI.updateFoto(imageFile: croppedFile);
-
       final updatedProfile = AuthenticationAPI.getProfile();
       setState(() {
         futureProfile = updatedProfile;
       });
-
       widget.onProfileUpdated();
-
       if (mounted) _showSnackbar("Foto profil berhasil diperbarui");
     } catch (e) {
       _showSnackbar("Gagal update foto: $e", isError: true);
@@ -246,14 +793,12 @@ class _ProfilePageState extends State<ProfilePage> {
             child: _buildCustomAppBar(),
           ),
           const SizedBox(height: 30),
-
           FadeInUp(
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 200),
             child: _buildProfileHeader(user),
           ),
           const SizedBox(height: 40),
-
           FadeInUp(
             duration: const Duration(milliseconds: 800),
             delay: const Duration(milliseconds: 300),
@@ -275,7 +820,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ]),
           ),
-
           const SizedBox(height: 30),
           FadeInUp(
             duration: const Duration(milliseconds: 800),
@@ -305,7 +849,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ]),
           ),
-
           const SizedBox(height: 40),
           FadeInUp(
             duration: const Duration(milliseconds: 800),
@@ -323,24 +866,7 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 48), // Spacer
           Expanded(
             child: Center(
               child: Text(
@@ -360,6 +886,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
           ),
+          const SizedBox(width: 48), // Spacer to balance
         ],
       ),
     );
@@ -421,7 +948,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: _pickImage,
+                  onTap: _showImageSourceDialog,
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -592,7 +1119,7 @@ class _ProfilePageState extends State<ProfilePage> {
             if (mounted) {
               Navigator.pushNamedAndRemoveUntil(
                 context,
-                '/login',
+                LoginPage.id,
                 (route) => false,
               );
             }

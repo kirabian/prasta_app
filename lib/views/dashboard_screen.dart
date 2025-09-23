@@ -9,6 +9,7 @@ import 'package:prasta/api/absen_service.dart';
 import 'package:prasta/api/register_service.dart';
 import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/profile_screen.dart';
+import 'package:prasta/views/riwayat_screen.dart';
 import 'package:prasta/views/statistik_screen.dart';
 import 'package:prasta/views/testing_dua.dart';
 import 'package:prasta/widgets/bottom_nav.dart';
@@ -662,7 +663,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'title': 'Riwayat',
         'icon': Icons.history_rounded,
         'gradient': [const Color(0xFF1B3D25), const Color(0xFF3E6B42)],
-        'onTap': () {},
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AttendanceHistoryPage()),
+          ).then((value) {
+            if (value == true) _loadDashboardData();
+          });
+        },
       },
       {
         'title': 'Lainnya',
