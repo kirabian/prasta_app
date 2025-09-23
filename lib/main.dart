@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:prasta/auth/forgot_password.dart';
 import 'package:prasta/auth/login.dart';
 import 'package:prasta/auth/register.dart';
 import 'package:prasta/views/dashboard_screen.dart';
@@ -50,6 +51,7 @@ class MyApp extends StatelessWidget {
         RegisterPage.id: (context) => const RegisterPage(),
         AttendanceHistoryPage.id: (context) => const AttendanceHistoryPage(),
         DashboardScreen.id: (context) => const DashboardScreen(),
+        ForgotPasswordScreen.id: (context) => const ForgotPasswordScreen(),
       },
       // home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );

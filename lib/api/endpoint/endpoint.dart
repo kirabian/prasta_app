@@ -15,4 +15,7 @@ class Endpoint {
   static const String batch = "$baseURL/batches";
   static const String historyAbsen = "$baseURL/absen/history";
   static const String editFoto = "$baseURL/profile/photo";
+  static const String forgotPassword =
+      "$baseURL/forgot-password"; // <-- TAMBAHKAN INI
+  static const String resetPassword = "$baseURL/reset-password";
 }

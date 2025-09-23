@@ -1,5 +1,9 @@
+import 'dart:async'; // <-- Import untuk Timer/Future.delayed
+
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart'; // <-- 1. Import package Lottie
 import 'package:prasta/api/register_service.dart';
+import 'package:prasta/auth/forgot_password.dart';
 import 'package:prasta/auth/register.dart';
 import 'package:prasta/extension/navigation.dart';
 import 'package:prasta/shared_preferenced/preferenced.dart';
@@ -21,10 +25,63 @@ class _LoginPageState extends State<LoginPage> {
   bool rememberMe = false;
   bool obscure = true;
 
+  // --- 2. Tambahkan method untuk menampilkan dialog ---
+  void _showStatusDialog(
+    String lottieAsset,
+    String message, {
+    bool isSuccess = false,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Lottie.asset(
+                lottieAsset,
+                width: 150,
+                height: 150,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    // Otomatis tutup dialog setelah 3 detik
+    Timer(const Duration(seconds: 3), () {
+      Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog
+      if (isSuccess) {
+        // Jika sukses, navigasi ke dashboard setelah dialog ditutup
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+    });
+  }
+
+  // --- 3. Modifikasi method _login ---
   Future<void> _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email dan password harus diisi")),
+      _showStatusDialog(
+        "assets/lottie/error.json", // Ganti dengan path Lottie error Anda
+        "Email dan password harus diisi",
       );
       return;
     }
@@ -39,17 +96,34 @@ class _LoginPageState extends State<LoginPage> {
       await PreferenceHandler.saveLogin();
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+
+      // Tampilkan dialog sukses. Navigasi akan diurus oleh _showStatusDialog.
+      _showStatusDialog(
+        "assets/lottie/success.json", // Ganti dengan path Lottie sukses Anda
+        "Login Berhasil!",
+        isSuccess: true,
       );
+      // Biarkan _isLoading tetap true agar tombol tidak aktif saat dialog sukses tampil
+      return; // Return agar finally tidak dieksekusi prematur
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Login gagal: $e")));
+      _showStatusDialog(
+        "assets/lottie/error.json", // Ganti dengan path Lottie error Anda
+        "Login Gagal! Periksa kembali email dan password Anda.",
+      );
     } finally {
-      setState(() => _isLoading = false);
+      // Hanya set _isLoading ke false jika login gagal.
+      // Jika berhasil, halaman akan diganti, jadi tidak perlu di-set.
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                     "assets/images/logo_prasta_putih.png",
                     height: 80,
                     width: double.infinity,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                 ),
 
@@ -85,7 +159,10 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Container putih melengkung
                 Container(
-                  height: MediaQuery.of(context).size.height,
+                  // Menggunakan min-height agar tidak overflow pada layar kecil
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height - 120,
+                  ),
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: const BoxDecoration(
@@ -112,6 +189,7 @@ class _LoginPageState extends State<LoginPage> {
                       // Input Email
                       TextField(
                         controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           hintText: "Masukan Email",
                           hintStyle: const TextStyle(color: Color(0xFF11261A)),
@@ -197,6 +275,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           GestureDetector(
                             onTap: () {
+                              context.pushNamed(ForgotPasswordScreen.id);
                               // Arahkan ke forgot password page
                             },
                             child: const Text(
@@ -219,7 +298,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF347338),
+                            backgroundColor: const Color(0xFF347338),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
