@@ -10,7 +10,7 @@ import 'package:prasta/models/absen_checkout_model.dart';
 import 'package:prasta/models/absen_stats_model.dart';
 import 'package:prasta/models/absen_today_model.dart';
 import 'package:prasta/models/history_absen_model.dart';
-import 'package:prasta/models/izin_model.dart'; // <-- DITAMBAHKAN
+import 'package:prasta/models/izin_model.dart'; // <-- Import model izin
 import 'package:prasta/shared_preferenced/preferenced.dart';
 
 class AbsenService {
@@ -21,10 +21,8 @@ class AbsenService {
     required String checkInLocation,
     required String checkInAddress,
   }) async {
-    // ... (kode checkIn tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
-
       final now = DateTime.now();
       final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
       final checkInTime = DateFormat('HH:mm').format(now);
@@ -46,8 +44,7 @@ class AbsenService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return AbsenCheckIn.fromJson(jsonResponse);
+        return AbsenCheckIn.fromJson(jsonDecode(response.body));
       } else {
         print("CheckIn Failed: ${response.body}");
         return null;
@@ -65,10 +62,8 @@ class AbsenService {
     required String checkOutLocation,
     required String checkOutAddress,
   }) async {
-    // ... (kode checkOut tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
-
       final now = DateTime.now();
       final attendanceDate = DateFormat('yyyy-MM-dd').format(now);
       final checkOutTime = DateFormat('HH:mm').format(now);
@@ -88,10 +83,8 @@ class AbsenService {
           "check_out_address": checkOutAddress,
         },
       );
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return AbsenCheckOut.fromJson(jsonResponse);
+        return AbsenCheckOut.fromJson(jsonDecode(response.body));
       } else {
         print("CheckOut Failed: ${response.body}");
         return null;
@@ -104,7 +97,6 @@ class AbsenService {
 
   /// Absen Today
   static Future<AbsenToday?> getAbsenToday() async {
-    // ... (kode getAbsenToday tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
       final now = DateTime.now();
@@ -135,10 +127,8 @@ class AbsenService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    // ... (kode getAbsenStats tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
-
       final String formattedStartDate = DateFormat(
         'yyyy-MM-dd',
       ).format(startDate);
@@ -157,8 +147,7 @@ class AbsenService {
       );
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        return AbsenStatsModel.fromJson(jsonResponse);
+        return AbsenStatsModel.fromJson(jsonDecode(response.body));
       } else {
         print("Get Absen Stats Failed: ${response.body}");
         return null;
@@ -174,7 +163,6 @@ class AbsenService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    // ... (kode getAbsenHistory tidak berubah)
     try {
       final token = await PreferenceHandler.getToken();
       final String formattedStartDate = DateFormat(
@@ -193,7 +181,6 @@ class AbsenService {
           "Authorization": "Bearer $token",
         },
       );
-
       if (response.statusCode == 200) {
         return AbsenHistoryModel.fromJson(jsonDecode(response.body));
       } else {
@@ -226,12 +213,13 @@ class AbsenService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return IzinModel.fromJson(jsonDecode(response.body));
       } else {
-        print("Submit Izin Failed: ${response.body}");
-        return null;
+        // Melempar error agar bisa ditangkap di UI
+        throw Exception('Gagal mengajukan izin: ${response.body}');
       }
     } catch (e) {
       print("Error Submit Izin: $e");
-      return null;
+      // Melempar kembali error untuk ditangani di UI
+      throw Exception('Terjadi kesalahan: $e');
     }
   }
 }

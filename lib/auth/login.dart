@@ -99,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // Tampilkan dialog sukses. Navigasi akan diurus oleh _showStatusDialog.
       _showStatusDialog(
-        "assets/lottie/success.json", // Ganti dengan path Lottie sukses Anda
+        "assets/lottie/Success.json", // Ganti dengan path Lottie sukses Anda
         "Login Berhasil!",
         isSuccess: true,
       );

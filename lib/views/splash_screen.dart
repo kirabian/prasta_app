@@ -46,8 +46,6 @@ class _Day16SplashScreenState extends State<Day16SplashScreen> {
               AppImage.Background,
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
-              repeat: true,
-              animate: true,
               fit: BoxFit.fill,
             ),
           ),
