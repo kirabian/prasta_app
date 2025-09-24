@@ -193,7 +193,7 @@ class AbsenService {
     }
   }
 
-  // ===== FUNGSI BARU UNTUK IZIN =====
+  // ===== FUNGSI BARU UNTUK IZIN (FIXED) =====
   /// Submit Izin
   static Future<IzinModel?> submitIzin({required String alasan}) async {
     try {
@@ -207,7 +207,10 @@ class AbsenService {
           "Accept": "application/json",
           "Authorization": "Bearer $token",
         },
-        body: {"attendance_date": attendanceDate, "alasan_izin": alasan},
+        body: {
+          "date": attendanceDate, // Changed from "attendance_date" to "date"
+          "alasan_izin": alasan,
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

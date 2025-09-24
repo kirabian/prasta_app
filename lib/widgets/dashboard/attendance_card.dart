@@ -8,6 +8,68 @@ class AttendanceCard extends StatelessWidget {
 
   const AttendanceCard({super.key, required this.absenTodayData});
 
+  // Widget untuk menampilkan status Izin
+  Widget _buildIzinStatus() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline_rounded, color: Colors.white70, size: 36),
+          SizedBox(height: 10),
+          Text(
+            "Anda tercatat Izin hari ini.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget untuk menampilkan Check-in & Check-out
+  Widget _buildTimeStatus(String checkIn, String checkOut) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        SlideInLeft(
+          duration: const Duration(milliseconds: 800),
+          delay: const Duration(milliseconds: 400),
+          child: _buildTimeColumn("Check-in", checkIn, Icons.login),
+        ),
+        FadeIn(
+          duration: const Duration(milliseconds: 600),
+          delay: const Duration(milliseconds: 500),
+          child: Container(
+            width: 2,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.2),
+                  Colors.white.withOpacity(0.5),
+                  Colors.white.withOpacity(0.2),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ),
+        SlideInRight(
+          duration: const Duration(milliseconds: 800),
+          delay: const Duration(milliseconds: 400),
+          child: _buildTimeColumn("Check-out", checkOut, Icons.logout),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Palet Warna Lokal
@@ -15,10 +77,27 @@ class AttendanceCard extends StatelessWidget {
     const Color primaryLight = Color(0xFF2D5233);
     const Color accentColor = Color(0xFF3E6B42);
 
+    // Ambil data dari map
     final checkIn = absenTodayData?['check_in'] ?? "--:--";
     final checkOut = absenTodayData?['check_out'] ?? "--:--";
-    final isCompleted = checkIn != "--:--" && checkOut != "--:--";
-    final status = isCompleted ? "Completed" : "On Progress";
+    final apiStatus = absenTodayData?['status'] ?? "On Progress";
+
+    // --- PERUBAHAN UTAMA DI SINI ---
+    // Tentukan logika status dengan mengubah status dari API menjadi huruf kecil
+    final bool isIzin = apiStatus.toString().toLowerCase() == 'izin';
+    final bool isCompleted = checkIn != "--:--" && checkOut != "--:--";
+
+    final String displayStatus;
+    final Color statusColor;
+
+    if (isIzin) {
+      displayStatus = "Izin";
+      statusColor = Colors.blueAccent; // Warna biru untuk status Izin
+    } else {
+      displayStatus = isCompleted ? "Completed" : "On Progress";
+      statusColor = isCompleted ? Colors.greenAccent : Colors.orangeAccent;
+    }
+    // --- AKHIR PERUBAHAN ---
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -36,12 +115,6 @@ class AttendanceCard extends StatelessWidget {
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
         ],
       ),
       child: Column(
@@ -57,13 +130,6 @@ class AttendanceCard extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        offset: Offset(0, 1),
-                        blurRadius: 3,
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -76,17 +142,8 @@ class AttendanceCard extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.2),
-                        Colors.white.withOpacity(0.3),
-                      ],
-                    ),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -95,17 +152,11 @@ class AttendanceCard extends StatelessWidget {
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.greenAccent
-                              : Colors.orangeAccent,
+                          color: statusColor,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  (isCompleted
-                                          ? Colors.greenAccent
-                                          : Colors.orangeAccent)
-                                      .withOpacity(0.6),
+                              color: statusColor.withOpacity(0.6),
                               blurRadius: 4,
                               spreadRadius: 1,
                             ),
@@ -114,7 +165,7 @@ class AttendanceCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        status,
+                        displayStatus,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -146,41 +197,8 @@ class AttendanceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              SlideInLeft(
-                duration: const Duration(milliseconds: 800),
-                delay: const Duration(milliseconds: 400),
-                child: _buildTimeColumn("Check-in", checkIn, Icons.login),
-              ),
-              FadeIn(
-                duration: const Duration(milliseconds: 600),
-                delay: const Duration(milliseconds: 500),
-                child: Container(
-                  width: 2,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.2),
-                        Colors.white.withOpacity(0.5),
-                        Colors.white.withOpacity(0.2),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ),
-              SlideInRight(
-                duration: const Duration(milliseconds: 800),
-                delay: const Duration(milliseconds: 400),
-                child: _buildTimeColumn("Check-out", checkOut, Icons.logout),
-              ),
-            ],
-          ),
+          // Kondisi utama: tampilkan status izin ATAU waktu absen
+          isIzin ? _buildIzinStatus() : _buildTimeStatus(checkIn, checkOut),
         ],
       ),
     );

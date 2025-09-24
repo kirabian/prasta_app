@@ -2,6 +2,7 @@
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
+import 'package:prasta/views/izin_screen.dart';
 import 'package:prasta/views/riwayat_screen.dart';
 import 'package:prasta/views/statistik_screen.dart';
 import 'package:prasta/views/testing_dua.dart';
@@ -32,6 +33,15 @@ class QuickAccessGrid extends StatelessWidget {
         'icon': Icons.description_rounded,
         'gradient': [const Color(0xFF0D2818), const Color(0xFF1B3D25)],
         'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LeaveRequestPage()),
+          ).then((success) {
+            if (success == true) {
+              // Refresh dashboard data
+              onNavigate();
+            }
+          });
           // Navigasi ke Halaman Izin
         },
       },

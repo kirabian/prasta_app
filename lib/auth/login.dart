@@ -253,26 +253,26 @@ class _LoginPageState extends State<LoginPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: rememberMe,
-                                activeColor: const Color(0xFF347338),
-                                onChanged: (val) {
-                                  setState(() {
-                                    rememberMe = val ?? false;
-                                  });
-                                },
-                              ),
-                              const Text(
-                                "Ingat saya",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF11261A),
-                                ),
-                              ),
-                            ],
-                          ),
+                          // Row(
+                          //   children: [
+                          //     Checkbox(
+                          //       value: rememberMe,
+                          //       activeColor: const Color(0xFF347338),
+                          //       onChanged: (val) {
+                          //         setState(() {
+                          //           rememberMe = val ?? false;
+                          //         });
+                          //       },
+                          //     ),
+                          //     // const Text(
+                          //     //   "Ingat saya",
+                          //     //   style: TextStyle(
+                          //     //     fontSize: 12,
+                          //     //     color: Color(0xFF11261A),
+                          //     //   ),
+                          //     // ),
+                          //   ],
+                          // ),
                           GestureDetector(
                             onTap: () {
                               context.pushNamed(ForgotPasswordScreen.id);

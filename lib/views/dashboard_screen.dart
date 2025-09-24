@@ -45,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       _profileFuture = AuthenticationAPI.getProfile();
       await _absenToday();
-      await _profileFuture; // Tunggu kedua proses selesai
+      await _profileFuture;
     } catch (e) {
       debugPrint("Error loading dashboard data: $e");
     } finally {
@@ -53,17 +53,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // --- BAGIAN YANG DIPERBARUI ---
   Future<void> _absenToday() async {
     final response = await AbsenService.getAbsenToday();
     if (mounted) {
       setState(() {
         if (response != null && response.data != null) {
+          // Ambil status dari API, jika null, default-nya "On Progress"
+          final status = response.data!.status ?? "On Progress";
+
           _absenTodayData = {
-            "status": response.data!.status ?? "On Progress",
+            "status": status,
             "check_in": response.data!.checkInTime ?? "--:--",
             "check_out": response.data!.checkOutTime ?? "--:--",
           };
         } else {
+          // Jika tidak ada data sama sekali
           _absenTodayData = {
             "status": "On Progress",
             "check_in": "--:--",
@@ -73,6 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
   }
+  // --- AKHIR PERUBAHAN ---
 
   void _onTabTapped(int index) {
     setState(() {
@@ -174,16 +180,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 16),
             QuickAccessGrid(onNavigate: _loadDashboardData),
-            const SizedBox(height: 20),
-            Center(
-              child: Text(
-                "© 2025 PPKDJP and BIAN. All rights reserved.",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
           ],
         ),
       ),
