@@ -38,11 +38,11 @@ class HistoryAppBar extends StatelessWidget {
             ),
           ),
         ),
-        _buildIconButton(
-          icon: Icons.date_range_rounded,
-          onPressed: onDateFilterPressed,
-        ),
-        const SizedBox(width: 12),
+        // _buildIconButton(
+        //   icon: Icons.date_range_rounded,
+        //   onPressed: onDateFilterPressed,
+        // ),
+        // const SizedBox(width: 12),
         InkWell(
           onTap: isExportEnabled ? onExportPressed : null,
           borderRadius: BorderRadius.circular(12),
@@ -86,7 +86,7 @@ class HistoryAppBar extends StatelessWidget {
             BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8),
           ],
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: const Color.fromARGB(255, 0, 0, 0), size: 20),
       ),
     );
   }

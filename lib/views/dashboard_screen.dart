@@ -8,6 +8,7 @@ import 'package:prasta/models/get_user_model.dart';
 import 'package:prasta/views/profile_screen.dart';
 import 'package:prasta/widgets/bottom_nav.dart';
 import 'package:prasta/widgets/dashboard/attendance_card.dart';
+import 'package:prasta/widgets/dashboard/chat_screen.dart';
 import 'package:prasta/widgets/dashboard/dashboard_header.dart';
 import 'package:prasta/widgets/dashboard/loading_shimmer.dart';
 import 'package:prasta/widgets/dashboard/quick_access_grid.dart';
@@ -25,6 +26,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late Future<GetUserModel> _profileFuture;
   Map<String, dynamic>? _absenTodayData;
   bool _isLoading = true;
+  String? _errorMessage;
+
+  final PageController _pageController = PageController();
 
   // Palet Warna
   final Color backgroundColor = const Color(0xFF0A1E0F);
@@ -40,49 +44,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboardData();
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadDashboardData() async {
-    if (mounted) setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       _profileFuture = AuthenticationAPI.getProfile();
       await _absenToday();
       await _profileFuture;
     } catch (e) {
       debugPrint("Error loading dashboard data: $e");
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Gagal memuat data. Tarik untuk menyegarkan.";
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- BAGIAN YANG DIPERBARUI ---
   Future<void> _absenToday() async {
     final response = await AbsenService.getAbsenToday();
     if (mounted) {
       setState(() {
         if (response != null && response.data != null) {
-          // Ambil status dari API, jika null, default-nya "On Progress"
           final status = response.data!.status ?? "On Progress";
-
           _absenTodayData = {
             "status": status,
-            "check_in": response.data!.checkInTime ?? "--:--",
-            "check_out": response.data!.checkOutTime ?? "--:--",
+            "check_in": response.data!.checkInTime,
+            "check_out": response.data!.checkOutTime,
           };
         } else {
-          // Jika tidak ada data sama sekali
           _absenTodayData = {
             "status": "On Progress",
-            "check_in": "--:--",
-            "check_out": "--:--",
+            "check_in": null,
+            "check_out": null,
           };
         }
       });
     }
   }
-  // --- AKHIR PERUBAHAN ---
 
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     });
   }
 
@@ -110,7 +130,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 highlightColor: accentColor.withOpacity(0.5),
                 surfaceColor: surfaceColor,
               )
-            : pages[_currentIndex],
+            : PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                children: pages,
+              ),
       ),
       bottomNavigationBar: SlideInUp(
         duration: const Duration(milliseconds: 800),
@@ -136,10 +162,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+      // --- PENAMBAHAN 2: Floating Action Button ---
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatScreen()),
+          );
+        },
+        backgroundColor: accentColor,
+        tooltip: 'Tanya Asisten AI',
+        child: const Icon(Icons.support_agent, color: Colors.white),
+      ),
     );
   }
 
   Widget _buildDashboardContent() {
+    if (_errorMessage != null && !_isLoading) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_off,
+                color: Colors.white.withOpacity(0.7),
+                size: 60,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: _loadDashboardData,
+                child: const Text(
+                  "Coba Lagi",
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _loadDashboardData,

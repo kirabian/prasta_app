@@ -3,9 +3,9 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:prasta/views/izin_screen.dart';
+import 'package:prasta/views/map_check.dart';
 import 'package:prasta/views/riwayat_screen.dart';
 import 'package:prasta/views/statistik_screen.dart';
-import 'package:prasta/views/testing_dua.dart';
 
 class QuickAccessGrid extends StatelessWidget {
   final VoidCallback onNavigate;

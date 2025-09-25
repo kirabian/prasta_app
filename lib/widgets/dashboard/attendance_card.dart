@@ -8,82 +8,17 @@ class AttendanceCard extends StatelessWidget {
 
   const AttendanceCard({super.key, required this.absenTodayData});
 
-  // Widget untuk menampilkan status Izin
-  Widget _buildIzinStatus() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 10.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.info_outline_rounded, color: Colors.white70, size: 36),
-          SizedBox(height: 10),
-          Text(
-            "Anda tercatat Izin hari ini.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget untuk menampilkan Check-in & Check-out
-  Widget _buildTimeStatus(String checkIn, String checkOut) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        SlideInLeft(
-          duration: const Duration(milliseconds: 800),
-          delay: const Duration(milliseconds: 400),
-          child: _buildTimeColumn("Check-in", checkIn, Icons.login),
-        ),
-        FadeIn(
-          duration: const Duration(milliseconds: 600),
-          delay: const Duration(milliseconds: 500),
-          child: Container(
-            width: 2,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.2),
-                  Colors.white.withOpacity(0.5),
-                  Colors.white.withOpacity(0.2),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-        ),
-        SlideInRight(
-          duration: const Duration(milliseconds: 800),
-          delay: const Duration(milliseconds: 400),
-          child: _buildTimeColumn("Check-out", checkOut, Icons.logout),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Palet Warna Lokal
     const Color primaryColor = Color(0xFF1B3D25);
     const Color primaryLight = Color(0xFF2D5233);
     const Color accentColor = Color(0xFF3E6B42);
 
-    // Ambil data dari map
     final checkIn = absenTodayData?['check_in'] ?? "--:--";
     final checkOut = absenTodayData?['check_out'] ?? "--:--";
     final apiStatus = absenTodayData?['status'] ?? "On Progress";
 
-    // --- PERUBAHAN UTAMA DI SINI ---
-    // Tentukan logika status dengan mengubah status dari API menjadi huruf kecil
+    // Logika utama untuk menentukan tampilan kartu
     final bool isIzin = apiStatus.toString().toLowerCase() == 'izin';
     final bool isCompleted = checkIn != "--:--" && checkOut != "--:--";
 
@@ -92,12 +27,11 @@ class AttendanceCard extends StatelessWidget {
 
     if (isIzin) {
       displayStatus = "Izin";
-      statusColor = Colors.blueAccent; // Warna biru untuk status Izin
+      statusColor = Colors.blueAccent;
     } else {
       displayStatus = isCompleted ? "Completed" : "On Progress";
       statusColor = isCompleted ? Colors.greenAccent : Colors.orangeAccent;
     }
-    // --- AKHIR PERUBAHAN ---
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -197,8 +131,68 @@ class AttendanceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          // Kondisi utama: tampilkan status izin ATAU waktu absen
+          // Tampilkan widget berdasarkan status Izin
           isIzin ? _buildIzinStatus() : _buildTimeStatus(checkIn, checkOut),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeStatus(String checkIn, String checkOut) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        SlideInLeft(
+          duration: const Duration(milliseconds: 800),
+          delay: const Duration(milliseconds: 400),
+          child: _buildTimeColumn("Check-in", checkIn, Icons.login),
+        ),
+        FadeIn(
+          duration: const Duration(milliseconds: 600),
+          delay: const Duration(milliseconds: 500),
+          child: Container(
+            width: 2,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.2),
+                  Colors.white.withOpacity(0.5),
+                  Colors.white.withOpacity(0.2),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ),
+        SlideInRight(
+          duration: const Duration(milliseconds: 800),
+          delay: const Duration(milliseconds: 400),
+          child: _buildTimeColumn("Check-out", checkOut, Icons.logout),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIzinStatus() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline_rounded, color: Colors.white70, size: 36),
+          SizedBox(height: 10),
+          Text(
+            "Anda tercatat Izin hari ini.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );

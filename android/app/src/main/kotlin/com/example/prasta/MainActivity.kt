@@ -1,4 +1,4 @@
-package com.example.prasta
+package com.ppkd.prasta
 
 import io.flutter.embedding.android.FlutterActivity
 
