@@ -261,10 +261,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -274,447 +272,534 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             stops: const [0.0, 0.6, 1.0],
           ),
         ),
-        child: Stack(
-          children: [
-            // Animated waves at the bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: AnimatedWave(
-                color: primaryColor.withOpacity(0.3),
-                height: 120,
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // Animated waves at the bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: AnimatedWave(
+                  color: primaryColor.withOpacity(0.3),
+                  height: 100,
+                ),
               ),
-            ),
 
-            // Second wave layer
-            Positioned(
-              bottom: -20,
-              left: 0,
-              right: 0,
-              child: AnimatedWave(
-                color: accentColor.withOpacity(0.4),
-                height: 100,
+              // Second wave layer
+              Positioned(
+                bottom: -20,
+                left: 0,
+                right: 0,
+                child: AnimatedWave(
+                  color: accentColor.withOpacity(0.4),
+                  height: 80,
+                ),
               ),
-            ),
 
-            // Main content
-            SingleChildScrollView(
-              child: SizedBox(
-                height: screenHeight,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 60,
-                    ),
-                    child: SlideInUp(
-                      duration: const Duration(milliseconds: 1200),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              surfaceColor.withOpacity(0.95),
-                              primaryColor.withOpacity(0.85),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 25,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
-                            width: 1,
-                          ),
-                        ),
+              // Main scrollable content
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Logo and branding section integrated with form
-                            FadeIn(
-                              duration: const Duration(milliseconds: 1500),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 5),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Icons.account_circle,
-                                      size: 50,
-                                      color: primaryColor,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    "PRASTA",
-                                    style: TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: 2,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black.withOpacity(0.5),
-                                          offset: const Offset(0, 2),
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Sistem Absensi Digital",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 30),
-                                  // Login form header integrated seamlessly
-                                  Text(
-                                    "Masuk ke Akun",
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black.withOpacity(0.3),
-                                          offset: const Offset(0, 1),
-                                          blurRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Silakan login untuk melanjutkan",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white.withOpacity(0.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 40),
 
-                            // Email input
-                            FadeInUp(
-                              duration: const Duration(milliseconds: 800),
-                              delay: const Duration(milliseconds: 600),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Email",
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(15),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: TextField(
-                                      controller: _emailController,
-                                      keyboardType: TextInputType.emailAddress,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: "Masukan email Anda",
-                                        hintStyle: TextStyle(
-                                          color: Colors.white.withOpacity(0.6),
-                                          fontSize: 14,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.email_outlined,
-                                          color: Colors.white.withOpacity(0.8),
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white.withOpacity(
-                                          0.1,
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: accentColor,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 16,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Password input
-                            FadeInUp(
-                              duration: const Duration(milliseconds: 800),
-                              delay: const Duration(milliseconds: 800),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Password",
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(15),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: TextField(
-                                      controller: _passwordController,
-                                      obscureText: obscure,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText: "Masukan password Anda",
-                                        hintStyle: TextStyle(
-                                          color: Colors.white.withOpacity(0.6),
-                                          fontSize: 14,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.lock_outline,
-                                          color: Colors.white.withOpacity(0.8),
-                                        ),
-                                        suffixIcon: IconButton(
-                                          icon: Icon(
-                                            obscure
-                                                ? Icons.visibility_off
-                                                : Icons.visibility,
-                                            color: Colors.white.withOpacity(
-                                              0.8,
-                                            ),
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              obscure = !obscure;
-                                            });
-                                          },
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white.withOpacity(
-                                          0.1,
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: accentColor,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 16,
-                                            ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Forgot password
-                            FadeInRight(
-                              duration: const Duration(milliseconds: 800),
-                              delay: const Duration(milliseconds: 1000),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    context.pushNamed(ForgotPasswordScreen.id);
-                                  },
-                                  child: Text(
-                                    "Lupa Password?",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: accentColor,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Login button
-                            FadeInUp(
-                              duration: const Duration(milliseconds: 800),
-                              delay: const Duration(milliseconds: 1200),
+                            // Main login card
+                            SlideInUp(
+                              duration: const Duration(milliseconds: 1200),
                               child: Container(
                                 width: double.infinity,
-                                height: 56,
+                                constraints: const BoxConstraints(
+                                  maxWidth: 400,
+                                ),
+                                padding: EdgeInsets.all(
+                                  MediaQuery.of(context).size.width > 600
+                                      ? 40
+                                      : 28,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [accentColor, primaryLight],
+                                    colors: [
+                                      surfaceColor.withOpacity(0.95),
+                                      primaryColor.withOpacity(0.85),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(30),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: accentColor.withOpacity(0.4),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 6),
+                                      color: Colors.black.withOpacity(0.4),
+                                      blurRadius: 25,
+                                      offset: const Offset(0, 15),
                                     ),
                                   ],
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                    width: 1,
+                                  ),
                                 ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: _isLoading ? null : _login,
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Logo and branding section
+                                    FadeIn(
+                                      duration: const Duration(
+                                        milliseconds: 1500,
                                       ),
-                                      child: _isLoading
-                                          ? const Center(
-                                              child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 3,
-                                              ),
-                                            )
-                                          : const Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.login,
-                                                  color: Colors.white,
-                                                  size: 24,
-                                                ),
-                                                SizedBox(width: 12),
-                                                Text(
-                                                  "Masuk",
-                                                  style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 80,
+                                            height: 80,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.2),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 5),
                                                 ),
                                               ],
                                             ),
+                                            child: Icon(
+                                              Icons.account_circle,
+                                              size: 50,
+                                              color: primaryColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            "PRASTA",
+                                            style: TextStyle(
+                                              fontSize:
+                                                  MediaQuery.of(
+                                                        context,
+                                                      ).size.width >
+                                                      600
+                                                  ? 36
+                                                  : 32,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 2,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.5),
+                                                  offset: const Offset(0, 2),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Sistem Absensi Digital",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.white.withOpacity(
+                                                0.8,
+                                              ),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 30),
+
+                                          // Login form header
+                                          Text(
+                                            "Masuk ke Akun",
+                                            style: TextStyle(
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                  offset: const Offset(0, 1),
+                                                  blurRadius: 2,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Silakan login untuk melanjutkan",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.white.withOpacity(
+                                                0.8,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 32),
+
+                                    // Email input
+                                    FadeInUp(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      delay: const Duration(milliseconds: 600),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Email",
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(
+                                                0.9,
+                                              ),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(15),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: TextField(
+                                              controller: _emailController,
+                                              keyboardType:
+                                                  TextInputType.emailAddress,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText: "Masukan email Anda",
+                                                hintStyle: TextStyle(
+                                                  color: Colors.white
+                                                      .withOpacity(0.6),
+                                                  fontSize: 14,
+                                                ),
+                                                prefixIcon: Icon(
+                                                  Icons.email_outlined,
+                                                  color: Colors.white
+                                                      .withOpacity(0.8),
+                                                ),
+                                                filled: true,
+                                                fillColor: Colors.white
+                                                    .withOpacity(0.1),
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  borderSide: BorderSide.none,
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide: BorderSide(
+                                                        color: accentColor,
+                                                        width: 2,
+                                                      ),
+                                                    ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 16,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+
+                                    // Password input
+                                    FadeInUp(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      delay: const Duration(milliseconds: 800),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Password",
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(
+                                                0.9,
+                                              ),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(15),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: TextField(
+                                              controller: _passwordController,
+                                              obscureText: obscure,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText:
+                                                    "Masukan password Anda",
+                                                hintStyle: TextStyle(
+                                                  color: Colors.white
+                                                      .withOpacity(0.6),
+                                                  fontSize: 14,
+                                                ),
+                                                prefixIcon: Icon(
+                                                  Icons.lock_outline,
+                                                  color: Colors.white
+                                                      .withOpacity(0.8),
+                                                ),
+                                                suffixIcon: IconButton(
+                                                  icon: Icon(
+                                                    obscure
+                                                        ? Icons.visibility_off
+                                                        : Icons.visibility,
+                                                    color: Colors.white
+                                                        .withOpacity(0.8),
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      obscure = !obscure;
+                                                    });
+                                                  },
+                                                ),
+                                                filled: true,
+                                                fillColor: Colors.white
+                                                    .withOpacity(0.1),
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  borderSide: BorderSide.none,
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            15,
+                                                          ),
+                                                      borderSide: BorderSide(
+                                                        color: accentColor,
+                                                        width: 2,
+                                                      ),
+                                                    ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 16,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Forgot password
+                                    FadeInRight(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      delay: const Duration(milliseconds: 1000),
+                                      child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            context.pushNamed(
+                                              ForgotPasswordScreen.id,
+                                            );
+                                          },
+                                          child: Text(
+                                            "Lupa Password?",
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: accentColor,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 32),
+
+                                    // Login button - Fixed with proper Material structure
+                                    FadeInUp(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      delay: const Duration(milliseconds: 1200),
+                                      child: SizedBox(
+                                        width: double.infinity,
+                                        height: 56,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                accentColor,
+                                                primaryLight,
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: accentColor.withOpacity(
+                                                  0.4,
+                                                ),
+                                                blurRadius: 15,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ElevatedButton(
+                                            onPressed: _isLoading
+                                                ? null
+                                                : _login,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.transparent,
+                                              shadowColor: Colors.transparent,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    height: 24,
+                                                    width: 24,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          color: Colors.white,
+                                                          strokeWidth: 3,
+                                                        ),
+                                                  )
+                                                : const Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.login,
+                                                        color: Colors.white,
+                                                        size: 24,
+                                                      ),
+                                                      SizedBox(width: 12),
+                                                      Text(
+                                                        "Masuk",
+                                                        style: TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+
+                                    // Register link
+                                    FadeInUp(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      delay: const Duration(milliseconds: 1400),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            "Belum punya akun? ",
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(
+                                                0.8,
+                                              ),
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              context.pushNamed(
+                                                RegisterPage.id,
+                                              );
+                                            },
+                                            child: Text(
+                                              "Daftar di sini",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: accentColor,
+                                                fontSize: 16,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 24),
 
-                            // Register link
-                            FadeInUp(
-                              duration: const Duration(milliseconds: 800),
-                              delay: const Duration(milliseconds: 1400),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    "Belum punya akun? ",
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      context.pushNamed(RegisterPage.id);
-                                    },
-                                    child: Text(
-                                      "Daftar di sini",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: accentColor,
-                                        fontSize: 16,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const SizedBox(height: 40),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
